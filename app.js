@@ -12,6 +12,7 @@ var bodyParser = require('body-parser');
 var config = require('config');
 var datasource = require('./datasource');
 var routeHelper = require('./lib/routeHelper');
+var partialResponseHelper = require('./lib/partialResponseHelper');
 var swaggerTools = require('swagger-tools');
 var yaml = require('js-yaml');
 var fs = require('fs');
@@ -40,6 +41,8 @@ if (config.has('app.port')) {
 } else {
   port = 10010;
 }
+// parse the fields parameter
+app.use(partialResponseHelper.parseFields);
 
 // a127 middlewares
 app.use(a127.middleware());

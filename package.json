@@ -30,6 +30,7 @@
     "grunt-env": "^0.4.1",
     "grunt-nodemon": "0.2.1",
     "grunt-swagger-tools": "0.1.1",
+    "inflection": "1.5.1",
     "js-yaml": "",
     "newrelic": "^1.12.1",
     "load-grunt-tasks": "^0.4.0",

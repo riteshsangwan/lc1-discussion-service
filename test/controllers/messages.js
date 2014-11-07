@@ -5,6 +5,7 @@ var assert = require('assert');
 var request = require('supertest');
 var async = require('async');
 var config = require('config');
+var _ = require('lodash');
 
 var datasource = require('./../../datasource');
 datasource.init(config);
@@ -48,11 +49,11 @@ describe('Messages Controller', function() {
     it('should able to create a message with valid data', function(done) {
       // send request
       request(url)
-    	.post('/discussions/'+discussion.id+'/messages')
-    	.send(reqData)
+      .post('/discussions/'+discussion.id+'/messages')
+      .send(reqData)
       .expect('Content-Type', /json/)
       // end handles the response
-    	.end(function(err, res) {
+      .end(function(err, res) {
         should.not.exist(err);
         // verify response
         res.status.should.equal(200);
@@ -89,6 +90,67 @@ describe('Messages Controller', function() {
         res.body.result.success.should.be.false;
         res.body.result.status.should.equal(400);
         res.body.result.should.have.property('content');
+        done();
+      });
+    });
+
+    it('should be able to get partial response for all messages', function(done) {
+      request(url)
+      .get('/discussions/'+discussion.id+'/messages?fields=id')
+      .end(function(err, res) {
+        res.status.should.equal(200);
+        res.body.success.should.be.true;
+        res.body.status.should.equal(200);
+        _.forEach(res.body.content, function(entity) {
+          _.keys(entity).length.should.be.equal(1);
+          entity.should.have.property('id');
+        });
+        done();
+      });
+    });
+
+    it('should able to get the partial response for an existing message', function(done) {
+      // send request
+      request(url)
+      .get('/discussions/'+discussion.id+'/messages/'+messageId+'?fields=id,discussionId')
+      .end(function(err, res) {
+        res.status.should.equal(200);
+        res.body.success.should.be.true;
+        res.body.status.should.equal(200);
+        _.keys(res.body.content).length.should.be.equal(2);
+        res.body.content.id.should.equal(messageId);
+        res.body.content.discussionId.should.equal(discussion.id);
+        done();
+      });
+    });
+
+    it('should be able to get nested partial response for discussions', function(done) {
+      request(url)
+      .get('/discussions/' + discussion.id +'?fields=id,remoteObjectKey,messages')
+      .end(function(err, res) {
+        res.status.should.equal(200);
+        res.body.success.should.be.true;
+        res.body.status.should.equal(200);
+        _.keys(res.body.content).length.should.be.equal(3);
+        res.body.content.messages.should.exist;
+        res.body.content.messages.length.should.be.above(0);
+        done();
+      });
+    });
+
+    it('should be able to get specific fields for nested partial response for discussions', function(done) {
+      request(url)
+      .get('/discussions/' + discussion.id +'?fields=id,remoteObjectKey,messages(id)')
+      .end(function(err, res) {
+        res.status.should.equal(200);
+        res.body.success.should.be.true;
+        res.body.status.should.equal(200);
+        _.keys(res.body.content).length.should.be.equal(3);
+        res.body.content.messages.should.exist;
+        res.body.content.messages.length.should.be.above(0);
+        _.forEach(res.body.content.messages, function(message) {
+          _.keys(message).length.should.be.equal(1);
+        });
         done();
       });
     });
@@ -175,6 +237,28 @@ describe('Messages Controller', function() {
         res.body.metadata.totalCount.should.be.above(0);
         res.body.should.have.property('content');
         res.body.content.length.should.be.above(0);
+        done();
+      });
+    });
+
+    it('should able to get partial response for child messages in a message', function(done) {
+      var replyData = {content: 'reply content'};
+      // send request
+      request(url)
+      .get('/discussions/'+discussion.id+'/messages/'+messageId+'/messages?fields=id,content')
+      .end(function(err, res) {
+        should.not.exist(err);
+        // verify response
+        res.status.should.equal(200);
+        res.body.success.should.be.true;
+        res.body.status.should.equal(200);
+        res.body.should.have.property('metadata');
+        res.body.metadata.totalCount.should.be.above(0);
+        res.body.should.have.property('content');
+        res.body.content.length.should.be.above(0);
+        _.forEach(res.body.content, function(entity) {
+          _.keys(entity).length.should.be.equal(2);
+        });
         done();
       });
     });

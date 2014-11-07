@@ -6,6 +6,7 @@ var assert = require('assert');
 var request = require('supertest');
 var async = require('async');
 var config = require('config');
+var _ = require('lodash');
 
 var datasource = require('./../../datasource');
 datasource.init(config);
@@ -61,6 +62,36 @@ describe('Discussions Controller', function() {
         res.body.result.success.should.be.false;
         res.body.result.status.should.equal(400);
         res.body.result.should.have.property('content');
+        done();
+      });
+    });
+
+    it('should able to get partial response for all discussions', function(done) {
+      request(url)
+      .get('/discussions?fields=id')
+      .end(function(err, res) {
+        res.body.success.should.be.true;
+        res.body.status.should.equal(200);
+        res.body.should.have.property('metadata');
+        res.body.metadata.totalCount.should.be.above(0);
+        res.body.content.length.should.be.above(0);
+        _.forEach(res.body.content, function(entity) {
+          _.keys(entity).length.should.be.equal(1);
+          entity.should.have.property('id');
+        });
+        done();
+      });
+    });
+
+    it('should able to get partial response for a discussion', function(done) {
+      request(url)
+      .get('/discussions/' + discussionId +'?fields=id,remoteObjectKey')
+      .end(function(err, res) {
+        res.status.should.equal(200);
+        res.body.success.should.be.true;
+        res.body.status.should.equal(200);
+        _.keys(res.body.content).length.should.be.equal(2);
+        res.body.content.remoteObjectKey.should.equal(reqData.remoteObjectKey);
         done();
       });
     });
