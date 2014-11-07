@@ -6,7 +6,7 @@ var Discussion = datasource.Discussion;
 var Message = datasource.Message;
 var controllerHelper = require('./../../lib/controllerHelper');
 var async = require('async');
-
+var partialResponseHelper = require('./../../lib/partialResponseHelper');
 
 // build controller for message resource
 var messageController = controllerHelper.buildController(Message, [Discussion], {filtering: true});
@@ -53,33 +53,13 @@ function getMessages(req, res, next) {
   async.waterfall([
     function(callback) {
       var filters = {
+        // applying the primary key id filter
         where: {
           discussionId: req.swagger.params.discussionId.value,
-          id: req.swagger.params.messageId.value
+          parentMessageId: req.swagger.params.messageId.value
         }
       };
       controllerHelper.findEntities(Message, filters, req, callback);
-    },
-    function(count, messages, callback) {
-      // get the number of child messages
-      async.each(messages, function(message, cb) {
-        // filter to get the number of child messages in a message
-        var messageFilters = {
-          where: {
-            discussionId: message.discussionId,
-            parentMessageId: message.messageId
-          }
-        };
-        Message.count(messageFilters).success(function(count) {
-          message.dataValues.messageCount = count;
-          cb();
-        })
-        .error(function(err) {
-          cb(err);
-        });
-      }, function(err) {
-        callback(err, count, messages);
-      });
     }
   ], function(err, totalCount, messages) {
     if (!err) {
@@ -92,7 +72,8 @@ function getMessages(req, res, next) {
         content: messages
       };
     } 
-    next();
+    // call partial response middleware
+    partialResponseHelper.reduceFieldsAndExpandObject(Message, req, next);
   });
 
 }
